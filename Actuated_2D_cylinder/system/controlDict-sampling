@@ -1,0 +1,192 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      controlDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+libs (turbulenceModelSchemes);
+
+application     pimpleFoam;
+
+startFrom       latestTime;
+
+startTime       0;
+
+stopAt          endTime;
+
+endTime         91.1;
+
+deltaT          5e-5;
+
+writeControl    adjustableRunTime;
+
+writeInterval   0.001; //10;
+
+purgeWrite      0;
+
+writeFormat     ascii;
+
+writePrecision  10;
+
+writeCompression off;
+
+timeFormat      general;
+
+timePrecision   8;
+
+runTimeModifiable true;
+
+adjustTimeStep	no; //yes;
+
+maxCo		0.85; //7; //5; //25; //0.85;
+
+maxDeltaT	4e-4;
+
+// ************************************************************************* //
+
+///////////////////////////////////////////////////////////////////////////
+functions
+{
+
+    turbulenceFields1
+    {
+
+        type        turbulenceFields;
+        libs        ("libfieldFunctionObjects.so");
+
+
+        // Either field or fields entries
+
+        fields                  (k);
+
+        enabled                 true;
+
+        writeControl            outputTime;
+
+        executeControl          timeStep;
+
+        executeInterval         1;
+
+    }
+
+
+    fieldAverage
+    {
+        type            fieldAverage;
+        functionObjectLibs ("libfieldFunctionObjects.so");
+        enabled         true;
+        writeControl	outputTime;
+
+
+        timeStart       1;
+        //timeEnd       200;
+
+        fields
+        (
+            U
+            {
+                mean        on;
+                prime2Mean  on;
+                base        time;
+            }
+
+            p
+            {
+                mean        on;
+                prime2Mean  on;
+                base        time;
+            }
+            nut
+            {
+                mean        on;
+		prime2Mean  on;
+		base	    time;
+            }
+            turbulenceProperties:k
+            {
+                mean        on;
+                prime2Mean  on;
+                base        time;
+            }
+        );
+    };
+
+    forceCoeffs1
+    {
+        type            forceCoeffs;
+        libs            ("libforces.so");
+        enabled         true;
+        patches         ("walls_sja");       // Replace "cylinder" with the actual name of your cylinde>
+        rho             rhoInf;             // For incompressible flows
+        rhoInf          1.0;                // Set your fluid density
+        magUInf         0.585;              // Set your freestream velocity magnitude
+        lRef            0.1;                // Set your reference length (e.g., cylinder diameter)
+        Aref            0.004;                // Set your reference area (e.g., cylinder diameter for 2>
+        CofR            (0 0 0);            // Set the center of rotation for moment calculations
+        dragDir         (1 0 0);            // Set the direction of drag (usually the flow direction)
+        liftDir         (0 1 0);            // Set the direction of lift (perpendicular to drag in the >
+        writeInterval   1;                 // Write every time step
+    };
+
+    forceCoeffs2
+    {
+        type            forceCoeffs;
+        libs            ("libforces.so");
+        enabled         true;
+        patches         ("walls");       // Replace "cylinder" with the actual name of your cylinder wa$        log             yes;
+        rho             rhoInf;             // For incompressible flows
+        rhoInf          1.0;                // Set your fluid density
+        magUInf         0.585;              // Set your freestream velocity magnitude
+        lRef            0.1;                // Set your reference length (e.g., cylinder diameter)
+        Aref            0.03;                // Set your reference area (e.g., cylinder diameter for 2D$        
+	CofR            (0 0 0);            // Set the center of rotation for moment calculations
+        dragDir         (1 0 0);            // Set the direction of drag (usually the flow direction)
+        liftDir         (0 1 0);            // Set the direction of lift (perpendicular to drag in the $        pitchAxis       (0 0 1);            // Set the axis for pitching moment (for 2D, usually the z-$        writeControl    timeStep;          // How often to write the output
+        writeInterval   1;                 // Write every time step
+    };
+
+    probes
+    {
+        type            probes;
+        functionObjectLibs ("libsampling.so");
+        enabled         true;
+        writeControl    timeStep; //adjustableRunTime;  // Output at every time step
+        writeInterval   1;         // Every time step
+        log             true;      // Optional: Writes probe data to log file
+        timeStart       0;         // Optional: Start time for probe data
+
+        probeLocations
+        (
+            (0.07 0.0625 0)
+            (0.175 0.04 0)
+            (0.19 0 0)
+            (0.22 0 0)
+            (0.4 0.0 0)
+            (0.07 -0.0625 0)
+            (0.175 -0.04 0)
+        );
+
+        fields
+        (
+            U
+            p
+        );
+
+    };
+
+}
+///////////////////////////////////////////////////////////////////////////
+
+
+

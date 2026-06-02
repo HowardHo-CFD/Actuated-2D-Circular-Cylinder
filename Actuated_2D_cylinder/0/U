@@ -1,0 +1,385 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volVectorField;
+    location    "0";
+    object      U;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [ 0 1 -1 0 0 0 0 ];
+
+internalField   uniform (0.585 0 0 );
+
+boundaryField
+{
+    inlet
+    {
+        type            fixedValue;
+        value           uniform (0.585 0 0); // 0.585
+    }
+    outlet
+    {
+        type            inletOutlet;
+        inletValue      uniform (0 0 0);
+	value		uniform (0 0 0);
+    }
+    "(walls|neck_walls|walls_sja)"
+    {
+        type            noSlip;
+    }
+    "(front|back)"
+    {
+        type            cyclicAMI;
+    }
+
+jet_1
+{
+    type    codedFixedValue;
+    value   uniform (0 0 0);
+    name    periodicBoundary_1;
+
+    code
+    #{
+        const fvPatch& boundaryPatch = patch();
+        vectorField& field = *this;
+
+        // Physical parameters
+        const scalar rplate = 0.002;                      // slot radius
+        const scalar t = this->db().time().value();       // current time
+        const scalar c_b = 2;                             // centerline velocity
+        const scalar f_j = 60;                           // jet frequency [Hz]
+        const scalar w_j = 2 * M_PI * f_j;            // angular frequency [rad/s]
+        const scalar f_burst = 6;                        // burst frequency [Hz]
+        const scalar cycles_per_burst = 5.0;              // number of actuation cycles per burst
+        const scalar burst_period = 1.0 / f_burst;
+        const scalar jet_period = 1.0 / f_j;
+        const scalar burst_duration = cycles_per_burst * jet_period;
+		const scalar rise_frac = 0.2;
+		const scalar fall_frac = 0.2;
+
+        // Compute square-wave burst modulation envelope
+		scalar time_in_burst = std::fmod(t, burst_period);
+		scalar envelope = 0.0;
+
+		if (time_in_burst < burst_duration)
+		{
+			scalar tau = time_in_burst / burst_duration;  // 0 → 1
+
+			if (tau < rise_frac)
+			{
+				envelope = 0.5 * (1.0 - cos(M_PI * tau / rise_frac));
+			}
+			else if (tau > (1.0 - fall_frac))
+			{
+				scalar tau_f = (tau - (1.0 - fall_frac)) / fall_frac;
+				envelope = 0.5 * (1.0 + cos(M_PI * tau_f));
+			}
+			else
+			{
+				envelope = 1.0;
+			}
+		}
+		else
+		{
+			envelope = 0.0;
+		}
+
+        // Womersley parameters (simplified illustrative form)
+        const scalar w_o = 10.03;  // nondimensional Womersley frequency
+        forAll(boundaryPatch, faceI)
+        {
+            const scalar x = boundaryPatch.Cf()[faceI].x();
+            const scalar z = boundaryPatch.Cf()[faceI].z();
+            const scalar radius = pow (x*x + z*z, 0.5);
+
+            field[faceI] = vector(0, envelope * c_b * ((1 - std::sin(std::pow(std::complex<double>(0, 1), 3.0/2.0) * w_o * radius/rplate) /
+            (std::pow(std::complex<double>(0, 1), 3.0/2.0) * w_o * radius/rplate)
+            / (std::sin(std::pow(std::complex<double>(0, 1), 3.0/2.0) * w_o) / (std::pow(std::complex<double>(0, 1), 3.0/2.0) * w_o)))
+            * std::exp(std::complex<double>(0, w_j*t - M_PI/2))).real(),0);
+        }
+     #};
+}
+
+jet_2
+{
+    type    codedFixedValue;
+    value   uniform (0 0 0);
+    name    periodicBoundary_2;
+
+    code
+    #{
+        const fvPatch& boundaryPatch = patch();
+        vectorField& field = *this;
+
+        // Physical parameters
+        const scalar rplate = 0.002;                      // slot radius
+        const scalar t = this->db().time().value();       // current time
+        const scalar c_b = 2;                             // centerline velocity
+        const scalar f_j = 60;                           // jet frequency [Hz]
+        const scalar w_j = 2 * M_PI * f_j;            // angular frequency [rad/s]
+        const scalar f_burst = 6;                        // burst frequency [Hz]
+        const scalar cycles_per_burst = 5.0;              // number of actuation cycles per burst
+        const scalar burst_period = 1.0 / f_burst;
+        const scalar jet_period = 1.0 / f_j;
+        const scalar burst_duration = cycles_per_burst * jet_period;
+		const scalar rise_frac = 0.2;
+		const scalar fall_frac = 0.2;
+
+        // Compute square-wave burst modulation envelope
+		scalar time_in_burst = std::fmod(t, burst_period);
+		scalar envelope = 0.0;
+
+		if (time_in_burst < burst_duration)
+		{
+			scalar tau = time_in_burst / burst_duration;  // 0 → 1
+
+			if (tau < rise_frac)
+			{
+				envelope = 0.5 * (1.0 - cos(M_PI * tau / rise_frac));
+			}
+			else if (tau > (1.0 - fall_frac))
+			{
+				scalar tau_f = (tau - (1.0 - fall_frac)) / fall_frac;
+				envelope = 0.5 * (1.0 + cos(M_PI * tau_f));
+			}
+			else
+			{
+				envelope = 1.0;
+			}
+		}
+		else
+		{
+			envelope = 0.0;
+		}
+
+        // Womersley parameters (simplified illustrative form)
+        const scalar w_o = 10.03;  // nondimensional Womersley frequency
+        forAll(boundaryPatch, faceI)
+        {
+            const scalar x = boundaryPatch.Cf()[faceI].x();
+            const scalar z = boundaryPatch.Cf()[faceI].z() - 0.008;
+            const scalar radius = pow (x*x + z*z, 0.5);
+
+            field[faceI] = vector(0, envelope * c_b * ((1 - std::sin(std::pow(std::complex<double>(0, 1), 3.0/2.0) * w_o * radius/rplate) /
+            (std::pow(std::complex<double>(0, 1), 3.0/2.0) * w_o * radius/rplate)
+            / (std::sin(std::pow(std::complex<double>(0, 1), 3.0/2.0) * w_o) / (std::pow(std::complex<double>(0, 1), 3.0/2.0) * w_o)))
+            * std::exp(std::complex<double>(0, w_j*t - M_PI/2))).real(),0);
+        }
+     #};
+}
+
+jet_3
+{
+    type    codedFixedValue;
+    value   uniform (0 0 0);
+    name    periodicBoundary_3;
+
+    code
+    #{
+        const fvPatch& boundaryPatch = patch();
+        vectorField& field = *this;
+
+        // Physical parameters
+        const scalar rplate = 0.002;                      // slot radius
+        const scalar t = this->db().time().value();       // current time
+        const scalar c_b = 2;                             // centerline velocity
+        const scalar f_j = 60;                           // jet frequency [Hz]
+        const scalar w_j = 2 * M_PI * f_j;            // angular frequency [rad/s]
+        const scalar f_burst = 6;                        // burst frequency [Hz]
+        const scalar cycles_per_burst = 5.0;              // number of actuation cycles per burst
+        const scalar burst_period = 1.0 / f_burst;
+        const scalar jet_period = 1.0 / f_j;
+        const scalar burst_duration = cycles_per_burst * jet_period;
+		const scalar rise_frac = 0.2;
+		const scalar fall_frac = 0.2;
+
+        // Compute square-wave burst modulation envelope
+		scalar time_in_burst = std::fmod(t, burst_period);
+		scalar envelope = 0.0;
+
+		if (time_in_burst < burst_duration)
+		{
+			scalar tau = time_in_burst / burst_duration;  // 0 → 1
+
+			if (tau < rise_frac)
+			{
+				envelope = 0.5 * (1.0 - cos(M_PI * tau / rise_frac));
+			}
+			else if (tau > (1.0 - fall_frac))
+			{
+				scalar tau_f = (tau - (1.0 - fall_frac)) / fall_frac;
+				envelope = 0.5 * (1.0 + cos(M_PI * tau_f));
+			}
+			else
+			{
+				envelope = 1.0;
+			}
+		}
+		else
+		{
+			envelope = 0.0;
+		}
+
+        // Womersley parameters (simplified illustrative form)
+        const scalar w_o = 10.03;  // nondimensional Womersley frequency
+        forAll(boundaryPatch, faceI)
+        {
+            const scalar x = boundaryPatch.Cf()[faceI].x();
+            const scalar z = boundaryPatch.Cf()[faceI].z() - 0.016;
+            const scalar radius = pow (x*x + z*z, 0.5);
+
+            field[faceI] = vector(0, envelope * c_b * ((1 - std::sin(std::pow(std::complex<double>(0, 1), 3.0/2.0) * w_o * radius/rplate) /
+            (std::pow(std::complex<double>(0, 1), 3.0/2.0) * w_o * radius/rplate)
+            / (std::sin(std::pow(std::complex<double>(0, 1), 3.0/2.0) * w_o) / (std::pow(std::complex<double>(0, 1), 3.0/2.0) * w_o)))
+            * std::exp(std::complex<double>(0, w_j*t - M_PI/2))).real(),0);
+        }
+     #};
+}
+
+jet_4
+{
+    type    codedFixedValue;
+    value   uniform (0 0 0);
+    name    periodicBoundary_4;
+
+    code
+    #{
+        const fvPatch& boundaryPatch = patch();
+        vectorField& field = *this;
+
+        // Physical parameters
+        const scalar rplate = 0.002;                      // slot radius
+        const scalar t = this->db().time().value();       // current time
+        const scalar c_b = 2;                             // centerline velocity
+        const scalar f_j = 60;                           // jet frequency [Hz]
+        const scalar w_j = 2 * M_PI * f_j;            // angular frequency [rad/s]
+        const scalar f_burst = 6;                        // burst frequency [Hz]
+        const scalar cycles_per_burst = 5.0;              // number of actuation cycles per burst
+        const scalar burst_period = 1.0 / f_burst;
+        const scalar jet_period = 1.0 / f_j;
+        const scalar burst_duration = cycles_per_burst * jet_period;
+		const scalar rise_frac = 0.2;
+		const scalar fall_frac = 0.2;
+
+        // Compute square-wave burst modulation envelope
+		scalar time_in_burst = std::fmod(t, burst_period);
+		scalar envelope = 0.0;
+
+		if (time_in_burst < burst_duration)
+		{
+			scalar tau = time_in_burst / burst_duration;  // 0 → 1
+
+			if (tau < rise_frac)
+			{
+				envelope = 0.5 * (1.0 - cos(M_PI * tau / rise_frac));
+			}
+			else if (tau > (1.0 - fall_frac))
+			{
+				scalar tau_f = (tau - (1.0 - fall_frac)) / fall_frac;
+				envelope = 0.5 * (1.0 + cos(M_PI * tau_f));
+			}
+			else
+			{
+				envelope = 1.0;
+			}
+		}
+		else
+		{
+			envelope = 0.0;
+		}
+
+        // Womersley parameters (simplified illustrative form)
+        const scalar w_o = 10.03;  // nondimensional Womersley frequency
+        forAll(boundaryPatch, faceI)
+        {
+            const scalar x = boundaryPatch.Cf()[faceI].x();
+            const scalar z = boundaryPatch.Cf()[faceI].z() + 0.008;
+            const scalar radius = pow (x*x + z*z, 0.5);
+
+            field[faceI] = vector(0, envelope * c_b * ((1 - std::sin(std::pow(std::complex<double>(0, 1), 3.0/2.0) * w_o * radius/rplate) /
+            (std::pow(std::complex<double>(0, 1), 3.0/2.0) * w_o * radius/rplate)
+            / (std::sin(std::pow(std::complex<double>(0, 1), 3.0/2.0) * w_o) / (std::pow(std::complex<double>(0, 1), 3.0/2.0) * w_o)))
+            * std::exp(std::complex<double>(0, w_j*t - M_PI/2))).real(),0);
+        }
+     #};
+}
+
+jet_5
+{
+    type    codedFixedValue;
+    value   uniform (0 0 0);
+    name    periodicBoundary_5;
+
+    code
+    #{
+        const fvPatch& boundaryPatch = patch();
+        vectorField& field = *this;
+
+        // Physical parameters
+        const scalar rplate = 0.002;                      // slot radius
+        const scalar t = this->db().time().value();       // current time
+        const scalar c_b = 2;                             // centerline velocity
+        const scalar f_j = 60;                           // jet frequency [Hz]
+        const scalar w_j = 2 * M_PI * f_j;            // angular frequency [rad/s]
+        const scalar f_burst = 6;                        // burst frequency [Hz]
+        const scalar cycles_per_burst = 5.0;              // number of actuation cycles per burst
+        const scalar burst_period = 1.0 / f_burst;
+        const scalar jet_period = 1.0 / f_j;
+        const scalar burst_duration = cycles_per_burst * jet_period;
+		const scalar rise_frac = 0.2;
+		const scalar fall_frac = 0.2;
+
+        // Compute square-wave burst modulation envelope
+		scalar time_in_burst = std::fmod(t, burst_period);
+		scalar envelope = 0.0;
+
+		if (time_in_burst < burst_duration)
+		{
+			scalar tau = time_in_burst / burst_duration;  // 0 → 1
+
+			if (tau < rise_frac)
+			{
+				envelope = 0.5 * (1.0 - cos(M_PI * tau / rise_frac));
+			}
+			else if (tau > (1.0 - fall_frac))
+			{
+				scalar tau_f = (tau - (1.0 - fall_frac)) / fall_frac;
+				envelope = 0.5 * (1.0 + cos(M_PI * tau_f));
+			}
+			else
+			{
+				envelope = 1.0;
+			}
+		}
+		else
+		{
+			envelope = 0.0;
+		}
+
+        // Womersley parameters (simplified illustrative form)
+        const scalar w_o = 10.03;  // nondimensional Womersley frequency
+        forAll(boundaryPatch, faceI)
+        {
+            const scalar x = boundaryPatch.Cf()[faceI].x();
+            const scalar z = boundaryPatch.Cf()[faceI].z() + 0.016;
+            const scalar radius = pow (x*x + z*z, 0.5);
+
+            field[faceI] = vector(0, envelope * c_b * ((1 - std::sin(std::pow(std::complex<double>(0, 1), 3.0/2.0) * w_o * radius/rplate) /
+            (std::pow(std::complex<double>(0, 1), 3.0/2.0) * w_o * radius/rplate)
+            / (std::sin(std::pow(std::complex<double>(0, 1), 3.0/2.0) * w_o) / (std::pow(std::complex<double>(0, 1), 3.0/2.0) * w_o)))
+            * std::exp(std::complex<double>(0, w_j*t - M_PI/2))).real(),0);
+        }
+     #};
+}
+
+}
+// ************************************************************************* //

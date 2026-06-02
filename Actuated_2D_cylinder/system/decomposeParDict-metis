@@ -1,0 +1,43 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    note        "mesh decomposition control dictionary";
+    object      decomposeParDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+numberOfSubdomains  40; //320;
+
+method              metis; //scotch; //metis;
+
+metisCoeffs
+{
+    method  k-way;
+}
+
+distributed     no;
+
+roots           ( );
+
+constraints
+{
+    // Keep owner and neighbour of baffles on same processor
+    // (ie, keep it detectable as a baffle).
+    // Baffles are two boundary face sharing the same points
+    baffles
+    {
+        type    preserveBaffles;
+        enabled true;
+    }
+}
+
+// ************************************************************************* //
