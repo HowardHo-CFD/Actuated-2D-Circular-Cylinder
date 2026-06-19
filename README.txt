@@ -1,4 +1,4 @@
-This is my case setup for simulating flow over a 2D circular cylinder with wall-resolved LES at Re_D=3,900. Recorded presentation can be found at: https://www.youtube.com/watch?v=F_OGBEyhJ2c&t=1s
+This is my case setup for simulating flow over a 2D (infinite-span) circular cylinder with wall-resolved LES at Re_D=3,900. Recorded presentation can be found at: https://www.youtube.com/watch?v=F_OGBEyhJ2c&t=1s
 
 The caes setup also includes the UDF for 1 circular nozzle SJAs control parameters under 0/U.
 
